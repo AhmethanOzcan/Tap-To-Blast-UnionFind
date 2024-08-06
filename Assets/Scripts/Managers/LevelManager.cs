@@ -24,11 +24,13 @@ public class LevelManager : Singleton<LevelManager>
 
 
     private int[][] _startingBoard;
-
+    private Level _currentLevel;
+    private GridController _grid;
 
     protected override void Awake()
     {
         base.Awake();
+        _grid = FindObjectOfType<GridController>();
     }
 
     private void Start() {
@@ -65,11 +67,8 @@ public class LevelManager : Singleton<LevelManager>
                 this._startingBoard[x][y] = Random.Range(0, K+1);
             }
         }
-    }
 
-    public Level GetLevel()
-    {
-        return new Level(
+        _currentLevel = new Level(
             this.M,
             this.N,
             this.K,
@@ -80,11 +79,16 @@ public class LevelManager : Singleton<LevelManager>
         );
     }
 
+    public Level GetLevel()
+    {
+        return _currentLevel;
+    }
+
     public void CreateNewLevel()
     {
         CreateEmptyBoard();
         FillEmptyBoard();
-        Debug.Log(GetLevel()._colorCount);
+        _grid.StartGridCreation();
     }
 }
 
