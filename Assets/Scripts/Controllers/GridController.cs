@@ -37,11 +37,12 @@ public class GridController : MonoBehaviour
         _worldPosition.x -= (this._width /2) * this._tileSize;
         if(this._width % 2 == 0) 
             _worldPosition.x += this._tileSize/2f;
+        TileManager.Instance._activeSpawns.Clear();
         for(int i = 0; i < this._width; i++)
         {
             _spawnPoints[i].transform.position = _worldPosition;
             _worldPosition.x += this._tileSize;
-            //TileManager.Instance._spawnPoints.Add(_spawnPoint.transform);
+            TileManager.Instance._activeSpawns.Add(_spawnPoints[i].transform);
         }
     }
 
@@ -53,5 +54,6 @@ public class GridController : MonoBehaviour
         SetGridSize();
         transform.localScale = Vector2.one;
         ReplaceSpawnPoints();
+        TileManager.Instance.StartNewLevel(this.transform);
     }
 }
