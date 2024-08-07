@@ -8,7 +8,7 @@ public class GridController : MonoBehaviour
     private int _width;
     private int _height;
     private float _tileSize;
-    private float _borderSize = 0.3f;
+    private float _borderSize = 0.45f;
     Vector2 _gridSize;
     [SerializeField] Transform[] _spawnPoints;
 
@@ -21,8 +21,7 @@ public class GridController : MonoBehaviour
     {
         this._width     = LevelManager.Instance.GetLevel()._columnCount;
         this._height    = LevelManager.Instance.GetLevel()._rowCount;
-        Debug.Log(TileManager.Instance._tilePrefab.GetComponent<BoxCollider2D>().size.x);
-        this._tileSize  = TileManager.Instance._tilePrefab.GetComponent<BoxCollider2D>().size.x; 
+        this._tileSize  = TileManager.Instance._tilePrefab.GetComponent<SpriteRenderer>().bounds.size.x - .075f;
     }
 
     private void SetGridSize()

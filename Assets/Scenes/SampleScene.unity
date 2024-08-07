@@ -643,7 +643,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _activeSpawns: []
+  _tileSprites:
+  - {fileID: 21300000, guid: 8eb98b1b195029047970ed839f26e6c4, type: 3}
+  - {fileID: 21300000, guid: 4b4979d4f6e6ebf4aa9aa4090a84548b, type: 3}
+  - {fileID: 21300000, guid: c3a5b2390769aab428b858dbec074a9f, type: 3}
+  - {fileID: 21300000, guid: b7fc01f748dc75745a16ab359f1f16d4, type: 3}
+  - {fileID: 21300000, guid: c787e006ad66d584da0acc0a5bc27d0a, type: 3}
+  - {fileID: 21300000, guid: 8fb09ed26cf77584986ee33dcd6427fe, type: 3}
+  - {fileID: 21300000, guid: 32a0d6864d68cae4384130a58cf4659a, type: 3}
   _tilePrefab: {fileID: 7795398829253133924, guid: d26c7c46eb8bd264a9455f7804f9e52d, type: 3}
+  _flattenedGrid: 
 --- !u!1 &1182875903
 GameObject:
   m_ObjectHideFlags: 0
@@ -1203,7 +1212,7 @@ Transform:
   m_GameObject: {fileID: 1727131597}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: -1, z: 0}
   m_LocalScale: {x: 0, y: 0, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
