@@ -21,7 +21,8 @@ public class GridController : MonoBehaviour
     {
         this._width     = LevelManager.Instance.GetLevel()._columnCount;
         this._height    = LevelManager.Instance.GetLevel()._rowCount;
-        this._tileSize  = 0.5f; 
+        Debug.Log(TileManager.Instance._tilePrefab.GetComponent<BoxCollider2D>().size.x);
+        this._tileSize  = TileManager.Instance._tilePrefab.GetComponent<BoxCollider2D>().size.x; 
     }
 
     private void SetGridSize()

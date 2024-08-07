@@ -5,11 +5,15 @@ using System;
 public class TileManager : Singleton<TileManager>
 {
     [HideInInspector] public List<Transform> _activeSpawns = new List<Transform>();
+    public GameObject _tilePrefab;
     public TileController[][] _tileControllers;
     public Vector3[][] _gridPositions;
     Level _level;
 
-    // Start is called before the first frame update
+    protected override void Awake() {
+        base.Awake();
+    }
+
     void Start()
     {
         
@@ -25,14 +29,23 @@ public class TileManager : Singleton<TileManager>
     {
         this._level     = LevelManager.Instance.GetLevel();
         FillGridTransforms(gridTransform);
+        CreateTileMatrices();
+    }
+
+    private void CreateTileMatrices()
+    {
+        _tileControllers = new TileController[_level._columnCount][];
+        for (int i = 0; i < _level._columnCount; i++)
+        {
+            _tileControllers[i] = new TileController[_level._rowCount];
+        }
     }
 
     private void FillGridTransforms(Transform gridTransform)
     {
         if(_gridPositions != null && _gridPositions.Length > 0)
             CleanMatrix<Vector3>(_gridPositions);
-        // float _tileSize = this._tilePrefab.GetComponent<SpriteRenderer>().bounds.size.x;
-        float _tileSize = 0.5f;
+        float _tileSize = this._tilePrefab.GetComponent<BoxCollider2D>().bounds.size.x;
         float _yPoint   =  gridTransform.position.y - _activeSpawns[0].position.y - _tileSize * _level._rowCount/2 + (_level._rowCount%2)*_tileSize/2 + Math.Abs((_level._rowCount%2)-1)*0.2f;
         
         _gridPositions = new Vector3[_level._columnCount][];
