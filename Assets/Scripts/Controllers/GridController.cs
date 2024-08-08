@@ -21,7 +21,7 @@ public class GridController : MonoBehaviour
     {
         this._width     = LevelManager.Instance.GetLevel()._columnCount;
         this._height    = LevelManager.Instance.GetLevel()._rowCount;
-        this._tileSize  = TileManager.Instance._tilePrefab.GetComponent<SpriteRenderer>().bounds.size.x - .075f;
+        this._tileSize  = PoolingManager.Instance._tilePrefab.GetComponent<SpriteRenderer>().bounds.size.x - .075f;
     }
 
     private void SetGridSize()
@@ -54,6 +54,6 @@ public class GridController : MonoBehaviour
         SetGridSize();
         transform.localScale = Vector2.one;
         ReplaceSpawnPoints();
-        TileManager.Instance.StartNewLevel(this.transform);
+        TileManager.Instance.StartNewLevel(this.transform.position);
     }
 }
