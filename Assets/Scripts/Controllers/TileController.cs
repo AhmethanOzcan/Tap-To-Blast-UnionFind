@@ -43,8 +43,7 @@ public class TileController : MonoBehaviour
             {
                 transform.position = _targetPosition;
                 _falling = false;
-                if(_tile._coordinates.y == TileManager.Instance._level._rowCount - 1)
-                    TileManager.Instance.CheckTopReady(_tile._coordinates.x);
+                TileManager.Instance.PerformUnionFind();
             }
         }
     }

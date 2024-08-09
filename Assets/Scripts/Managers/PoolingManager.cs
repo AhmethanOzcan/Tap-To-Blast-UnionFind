@@ -8,7 +8,7 @@ public class PoolingManager : Singleton<PoolingManager>
     [SerializeField] Transform _folder;
     public GameObject _tilePrefab;
     private GameObject[] _pooledObjects;
-
+    public bool IsReady { get; private set; }
     protected override void Awake() 
     {
         base.Awake();    
@@ -27,6 +27,7 @@ public class PoolingManager : Singleton<PoolingManager>
             tmp.SetActive(false);
             _pooledObjects[i] = tmp;
         }
+        IsReady = true;
     }
 
     public GameObject GetPooledObject(Vector3 position)

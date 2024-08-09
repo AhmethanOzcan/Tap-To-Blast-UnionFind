@@ -8,7 +8,7 @@ public class TileManager : Singleton<TileManager>
     [HideInInspector] public List<Transform> _activeSpawns = new List<Transform>();
     public Sprite[] _tileSprites;
     public TileController[][] _tileControllers;
-    public TileType[] _flattenedGrid;
+    public TileType?[] _flattenedGrid;
     public Vector3[][] _gridPositions;
     private int _totalTiles;
     private UnionFind _unionFind;
@@ -51,9 +51,20 @@ public class TileManager : Singleton<TileManager>
     {
         TileController clickedTile = _tileControllers[x][y];
         int flatIndex = to_index(x, y);
-        if(clickedTile.IsFalling() || _unionFind.GetSize(flatIndex) == 1 || _flattenedGrid[flatIndex] == TileType.box)
+        if(clickedTile == null || clickedTile.IsFalling() || _unionFind.GetSize(flatIndex) == 1 || _flattenedGrid[flatIndex] == TileType.box)
             return;
-        Debug.Log("Tile Clicked: " + x + " "+ y);
+        
+        int leaderIndex = _unionFind.Find(flatIndex);
+        for(int i = 0; i < _totalTiles; i++)
+        {
+            if(_unionFind.Find(i) == leaderIndex)
+            {
+                Vector2Int coordinates = from_index(i);
+                _tileControllers[coordinates.x][coordinates.y].gameObject.SetActive(false);
+                _tileControllers[coordinates.x][coordinates.y] = null;
+                _flattenedGrid[flatIndex] = null;
+            }
+        }
     }
 
     public void StartNewLevel(Vector3 gridPos)
@@ -64,13 +75,12 @@ public class TileManager : Singleton<TileManager>
         this._tileSize          = _activeSpawns[1].position.x - _activeSpawns[0].position.x;
         this._level             = LevelManager.Instance.GetLevel();
         _totalTiles             = this._level._rowCount * this._level._columnCount;
-        this._flattenedGrid     = new TileType[_totalTiles];
+        this._flattenedGrid     = new TileType?[_totalTiles];
         this._unionFind         = new UnionFind(_totalTiles);
         this._topReady          = new bool[_level._columnCount];
         FillGridTransforms(gridPos);
         CreateTileMatrices();
         StartCoroutine(FillTiles());
-        this._clicked           = false;
     }
 
     private void DisableEveryTile()
@@ -137,8 +147,13 @@ public class TileManager : Singleton<TileManager>
         }
     }
     
-    private IEnumerator FillTiles()
+    public IEnumerator FillTiles()
     {
+        while(!PoolingManager.Instance.IsReady)
+        {
+            yield return null;
+        }
+
         for(int y = 0; y < _level._rowCount; y++)
         {
             for(int x = 0; x < _level._columnCount; x++)
@@ -147,6 +162,7 @@ public class TileManager : Singleton<TileManager>
             }
             yield return new WaitForSeconds(0.1f);
         }
+        this._clicked           = false;
     }
 
     private void GenerateTile(TileType type, int x, int y)
@@ -158,18 +174,6 @@ public class TileManager : Singleton<TileManager>
         _flattenedGrid[flatIndex]              = tileInfo._tileType;
         _tileControllers[x][y].Initialize(tileInfo);
         
-    }
-
-    public void CheckTopReady(int x)
-    {
-        this._topReady[x] = true;
-        bool allReady = true;
-        foreach(bool top in this._topReady)
-            if(!top)
-                allReady = false;
-        
-        if(allReady)
-            PerformUnionFind();
     }
 
     public void PerformUnionFind()
@@ -185,11 +189,11 @@ public class TileManager : Singleton<TileManager>
                 int index = to_index(x, y);
                 if(_flattenedGrid[index] == TileType.box)
                     continue;
-                if (x > 0 && _flattenedGrid[index] == _flattenedGrid[to_index(x - 1, y)])
+                if (x > 0 && _tileControllers[x-1][y] != null && !_tileControllers[x-1][y].IsFalling() && _flattenedGrid[index] == _flattenedGrid[to_index(x - 1, y)])
                 {
                     _unionFind.Union(index, to_index(x - 1, y));
                 }
-                if (y > 0 && _flattenedGrid[index] == _flattenedGrid[to_index(x, y - 1)])
+                if (y > 0 && _tileControllers[x][y-1] != null && !_tileControllers[x][y-1].IsFalling() && _flattenedGrid[index] == _flattenedGrid[to_index(x, y - 1)])
                 {
                     _unionFind.Union(index, to_index(x, y - 1));
                 }
