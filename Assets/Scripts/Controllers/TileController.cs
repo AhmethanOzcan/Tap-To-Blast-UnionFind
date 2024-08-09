@@ -24,8 +24,9 @@ public class TileController : MonoBehaviour
         StartFalling(_tile._coordinates.y);
     }
 
-    private void StartFalling(int targetHeight)
+    public void StartFalling(int targetHeight)
     {
+        this._tile._coordinates.y = targetHeight;
         this._targetPosition                = TileManager.Instance._gridPositions[this._tile._coordinates.x][targetHeight];
         this._spriteRenderer.sortingOrder   = targetHeight+1;
         SetSprite(1);

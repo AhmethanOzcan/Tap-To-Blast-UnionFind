@@ -31,6 +31,8 @@ public class TileManager : Singleton<TileManager>
     {
         if (!_clicked && Input.GetMouseButton(0))
         {
+            if(_unionInProgress)
+                return;
             this._clicked = true;
             Vector2 tapPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             int x = Mathf.FloorToInt((tapPosition.x - _gridPositions[0][0].x + _tileSize / 2) / _tileSize);
@@ -51,20 +53,76 @@ public class TileManager : Singleton<TileManager>
     {
         TileController clickedTile = _tileControllers[x][y];
         int flatIndex = to_index(x, y);
-        if(clickedTile == null || clickedTile.IsFalling() || _unionFind.GetSize(flatIndex) == 1 || _flattenedGrid[flatIndex] == TileType.box)
+        if (clickedTile == null || clickedTile.IsFalling() || _unionFind.GetSize(flatIndex) == 1 || _flattenedGrid[flatIndex] == TileType.box)
             return;
-        
+
+        MakeThemDisappear(x,y);
+        MakeThemRain(MakeThemFall());
+    }
+
+    private void MakeThemDisappear(int x, int y)
+    {
+        int flatIndex = to_index(x, y);
         int leaderIndex = _unionFind.Find(flatIndex);
-        for(int i = 0; i < _totalTiles; i++)
+        for (int i = 0; i < _totalTiles; i++)
         {
-            if(_unionFind.Find(i) == leaderIndex)
+            if (_unionFind.Find(i) == leaderIndex)
             {
                 Vector2Int coordinates = from_index(i);
-                _tileControllers[coordinates.x][coordinates.y].gameObject.SetActive(false);
+                GameObject gameObject = _tileControllers[coordinates.x][coordinates.y].gameObject;
+                gameObject.SetActive(false);
                 _tileControllers[coordinates.x][coordinates.y] = null;
                 _flattenedGrid[flatIndex] = null;
             }
         }
+    }
+
+    private int[] MakeThemFall()
+    {
+        int currentFall;
+        int totalFall;
+        int[] newTileAmounts = new int[_level._columnCount];
+        for(int x = 0; x < _level._columnCount; x++)
+        {
+            currentFall = 0;
+            totalFall = 0;
+            for(int y = 0; y < _level._rowCount; y++)
+            {
+                if(_tileControllers[x][y] == null)
+                {
+                    currentFall += 1;
+                    totalFall += 1;
+                }else if(_tileControllers[x][y]._tile._tileType == TileType.box)
+                {
+                    currentFall = 0;
+                    totalFall = 0;
+                }
+                else if(currentFall != 0)
+                {
+                    int oldFlatIndex = to_index(x,y);
+                    int newFlatIndex = to_index(x,y-currentFall);
+                    _tileControllers[x][y-currentFall] = _tileControllers[x][y];
+                    _flattenedGrid[newFlatIndex] = _flattenedGrid[oldFlatIndex];
+                    _tileControllers[x][y] = null;
+                    _flattenedGrid[oldFlatIndex] = null;
+                    _tileControllers[x][y-currentFall].StartFalling(y-currentFall);
+                }
+            }
+            newTileAmounts[x] = totalFall;
+        }
+        return newTileAmounts;
+    }
+
+    private void MakeThemRain(int[] tileAmount)
+    {
+        for(int x = 0; x < _level._columnCount; x++)
+            Debug.Log(x+": "+tileAmount[x]);
+        // GameObject tile                        = PoolingManager.Instance.GetPooledObject(_activeSpawns[x].position);
+        // Tile tileInfo                          = new Tile(new Vector2Int(x, y), type);
+        // _tileControllers[x][y]                 = tile.GetComponent<TileController>();
+        // int flatIndex                          = to_index(x,y);
+        // _flattenedGrid[flatIndex]              = tileInfo._tileType;
+        // _tileControllers[x][y].Initialize(tileInfo);
     }
 
     public void StartNewLevel(Vector3 gridPos)
@@ -77,6 +135,7 @@ public class TileManager : Singleton<TileManager>
         _totalTiles             = this._level._rowCount * this._level._columnCount;
         this._flattenedGrid     = new TileType?[_totalTiles];
         this._unionFind         = new UnionFind(_totalTiles);
+        this._unionFind.Start();
         this._topReady          = new bool[_level._columnCount];
         FillGridTransforms(gridPos);
         CreateTileMatrices();
@@ -182,12 +241,13 @@ public class TileManager : Singleton<TileManager>
             return;
         else
             _unionInProgress = true;
+        _unionFind.Start();
         for (int y = 0; y < _level._rowCount; y++)
         {
             for (int x = 0; x < _level._columnCount; x++)
             {
                 int index = to_index(x, y);
-                if(_flattenedGrid[index] == TileType.box)
+                if(_flattenedGrid[index] == null || _flattenedGrid[index] == TileType.box)
                     continue;
                 if (x > 0 && _tileControllers[x-1][y] != null && !_tileControllers[x-1][y].IsFalling() && _flattenedGrid[index] == _flattenedGrid[to_index(x - 1, y)])
                 {
@@ -209,6 +269,8 @@ public class TileManager : Singleton<TileManager>
         {
             for (int x = 0; x < _level._columnCount; x++)
             {
+                if(this._tileControllers[x][y] == null)
+                    continue;
                 this._tileControllers[x][y].SetSprite(this._unionFind.GetSize(to_index(x,y)));
             }
         }
@@ -238,8 +300,12 @@ public class UnionFind
     {
         parent = new int[n];
         size = new int[n];
+        this.Start();
+    }
 
-        for (int i = 0; i < n; i++)
+    public void Start()
+    {
+        for (int i = 0; i < parent.Length; i++)
         {
             parent[i] = i;
             size[i] = 1;
