@@ -58,6 +58,30 @@ public class LevelManager : Singleton<LevelManager>
         this._startingBoard = null;
     }
 
+    private void FillEmptyBoardDeadLock()
+    {
+        for(int x = 0; x < this._startingBoard.Length; x++)
+        {
+            for(int y = 0; y < this._startingBoard[x].Length; y++)
+            {
+                if((x+y) % 2 == 1)
+                    this._startingBoard[x][y] = Random.Range(1, K+1);
+                else
+                    this._startingBoard[x][y] = 0;
+            }
+        }
+
+        _currentLevel = new Level(
+            this.M,
+            this.N,
+            this.K,
+            this.A,
+            this.B,
+            this.C,
+            this._startingBoard
+        );
+    }
+
     private void FillEmptyBoard()
     {
         for(int x = 0; x < this._startingBoard.Length; x++)
@@ -88,6 +112,13 @@ public class LevelManager : Singleton<LevelManager>
     {
         CreateEmptyBoard();
         FillEmptyBoard();
+        _grid.StartGridCreation();
+    }
+
+    public void CreateNewLevelDeadLock()
+    {
+        CreateEmptyBoard();
+        FillEmptyBoardDeadLock();
         _grid.StartGridCreation();
     }
 }
