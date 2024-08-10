@@ -296,13 +296,13 @@ public class TileManager : Singleton<TileManager>
                 for (int x = 0; x < _level._columnCount; x++)
                 {
                     int index = to_index(x, y);
-                    if(_flattenedGrid[index] == null || _flattenedGrid[index] == TileType.box || _tileControllers[x][y] == null || _tileControllers[x][y].IsFalling())
+                    if(_flattenedGrid[index] == null || _flattenedGrid[index] == TileType.box || _tileControllers[x][y] == null || _tileControllers[x][y].IsFalling() || _tileControllers[x][y]._newlyCreated)
                         continue;
-                    if (x > 0 && _tileControllers[x-1][y] != null && !_tileControllers[x-1][y].IsFalling() && _flattenedGrid[index] == _flattenedGrid[to_index(x - 1, y)])
+                    if (x > 0 && _tileControllers[x-1][y] != null && !_tileControllers[x-1][y].IsFalling() && !_tileControllers[x-1][y]._newlyCreated && _flattenedGrid[index] == _flattenedGrid[to_index(x - 1, y)])
                     {
                         _unionFind.Union(index, to_index(x - 1, y));
                     }
-                    if (y > 0 && _tileControllers[x][y-1] != null && !_tileControllers[x][y-1].IsFalling() && _flattenedGrid[index] == _flattenedGrid[to_index(x, y - 1)])
+                    if (y > 0 && _tileControllers[x][y-1] != null && !_tileControllers[x][y-1].IsFalling() && !_tileControllers[x][y-1]._newlyCreated && _flattenedGrid[index] == _flattenedGrid[to_index(x, y - 1)])
                     {
                         _unionFind.Union(index, to_index(x, y - 1));
                     }

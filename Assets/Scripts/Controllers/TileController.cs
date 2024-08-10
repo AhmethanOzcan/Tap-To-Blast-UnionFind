@@ -11,6 +11,7 @@ public class TileController : MonoBehaviour
     private bool _falling;
     private Vector3 _targetPosition;
     private Sprite _cachedSprite;
+    public bool _newlyCreated;
 
     private void Awake() {
         this._spriteRenderer = GetComponent<SpriteRenderer>();
@@ -20,10 +21,12 @@ public class TileController : MonoBehaviour
     {
         this._tile                  = _tile;
         this._extraLife             = _tile._tileType == TileType.box;
+        this._newlyCreated          = true;
     }
 
     public void StartFalling(int targetHeight)
     {
+        this._newlyCreated                  = false;
         this._tile._coordinates.y           = targetHeight;
         this._targetPosition                = TileManager.Instance._gridPositions[this._tile._coordinates.x][targetHeight];
         this._spriteRenderer.sortingOrder   = targetHeight+1;
