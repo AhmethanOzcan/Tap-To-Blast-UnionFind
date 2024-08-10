@@ -75,17 +75,46 @@ public class TileManager : Singleton<TileManager>
             // Pop the tiles
             int flatIndex = to_index(corX, corY);
             int leaderIndex = _unionFind.Find(flatIndex);
+            HashSet<Vector2Int> boxCoordinates = new HashSet<Vector2Int>();
             for (int i = 0; i < _totalTiles; i++)
                 _unionFind.Find(i);
             for (int i = 0; i < _totalTiles; i++)
             {
+                if(_flattenedGrid[i] == null)
+                    continue;
                 if (_unionFind.Find(i) == leaderIndex)
                 {
                     Vector2Int coordinates = from_index(i);
                     GameObject gameObject = _tileControllers[coordinates.x][coordinates.y].gameObject;
                     PoolingManager.Instance.ReturnPooledObject(gameObject);
                     _tileControllers[coordinates.x][coordinates.y] = null;
-                    _flattenedGrid[flatIndex] = null;
+                    _flattenedGrid[i] = null;
+                    
+                    // Check for boxes
+                    if(coordinates.y > 0 && _flattenedGrid[i - _level._columnCount] != null && _flattenedGrid[i - _level._columnCount] == TileType.box)
+                        boxCoordinates.Add(new Vector2Int(coordinates.x, coordinates.y-1));
+                    if(coordinates.x > 0 && _flattenedGrid[i - 1] != null && _flattenedGrid[i - 1] == TileType.box)
+                        boxCoordinates.Add(new Vector2Int(coordinates.x-1, coordinates.y));
+                    if(coordinates.x < _level._columnCount-1 && _flattenedGrid[i + 1] != null && _flattenedGrid[i + 1] == TileType.box)
+                        boxCoordinates.Add(new Vector2Int(coordinates.x+1, coordinates.y));
+                    if(coordinates.y < _level._rowCount-1 && _flattenedGrid[i + _level._columnCount] != null && _flattenedGrid[i + _level._columnCount] == TileType.box)
+                        boxCoordinates.Add(new Vector2Int(coordinates.x, coordinates.y+1));
+
+                }
+            }
+
+            // Damage the boxes
+            foreach(Vector2Int boxPos in boxCoordinates)
+            {
+                TileController boxController = _tileControllers[boxPos.x][boxPos.y];
+                if(boxController._extraLife)
+                    boxController._extraLife = false;
+                else
+                {
+                    GameObject boxGameObject = boxController.gameObject;
+                    PoolingManager.Instance.ReturnPooledObject(boxGameObject);
+                    _tileControllers[boxPos.x][boxPos.y] = null;
+                    _flattenedGrid[to_index(boxPos.x, boxPos.y)] = null;
                 }
             }
 
