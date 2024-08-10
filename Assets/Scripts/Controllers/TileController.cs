@@ -20,8 +20,6 @@ public class TileController : MonoBehaviour
     {
         this._tile                  = _tile;
         this._extraLife             = _tile._tileType == TileType.box;
-        SetSprite(1);
-        StartFalling(_tile._coordinates.y);
     }
 
     public void StartFalling(int targetHeight)
@@ -61,7 +59,7 @@ public class TileController : MonoBehaviour
 
         Sprite newSprite = GetSprite(count);
 
-        if (_cachedSprite != newSprite)
+        if (_cachedSprite == null || _cachedSprite != newSprite)
         {
             this._spriteRenderer.sprite = newSprite;
             _cachedSprite = newSprite;
