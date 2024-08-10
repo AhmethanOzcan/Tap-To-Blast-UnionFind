@@ -148,7 +148,6 @@ public class TileManager : Singleton<TileManager>
                     }
                 }
             }
-            PerformUnionFind();
 
             // Let New Tiles Come
             for (int amount = _level._rowCount; amount > 0; amount--)
@@ -168,6 +167,7 @@ public class TileManager : Singleton<TileManager>
                     }
                 }
             }
+            PerformUnionFind();
         }
         StartCoroutine(ProcessCreationQueue());
     }
@@ -296,23 +296,20 @@ public class TileManager : Singleton<TileManager>
         {
             for(int x = 0; x < _level._columnCount; x++)
             {
-                GenerateTile((TileType)_level._startingBoard[x][y], x, y);
+                GameObject tile                                     = PoolingManager.Instance.GetPooledObject(_activeSpawns[x].position);
+                Tile tileInfo                                       = new Tile(new Vector2Int(x, y), (TileType)_level._startingBoard[x][y]);
+                _tileControllers[x][y]                              = tile.GetComponent<TileController>();
+                int flatIndex                                       = to_index(x,y);
+                _flattenedGrid[flatIndex]                           = tileInfo._tileType;
+                _tileControllers[x][y].Initialize(tileInfo);
+                _tileControllers[x][y]._newlyCreated                = false;
+                _tileControllers[x][y].QuitFalling();
+                _tileControllers[x][y]._spriteRenderer.sortingOrder = y + 1;
+                _tileControllers[x][y].transform.position           = _gridPositions[x][y];
             }
-            yield return new WaitForSeconds(0.1f);
         }
+        PerformUnionFind();
         this._clicked           = false;
-    }
-
-    private void GenerateTile(TileType type, int x, int y)
-    {
-        GameObject tile                        = PoolingManager.Instance.GetPooledObject(_activeSpawns[x].position);
-        Tile tileInfo                          = new Tile(new Vector2Int(x, y), type);
-        _tileControllers[x][y]                 = tile.GetComponent<TileController>();
-        int flatIndex                          = to_index(x,y);
-        _flattenedGrid[flatIndex]              = tileInfo._tileType;
-        _tileControllers[x][y].Initialize(tileInfo);
-        _tileControllers[x][y].StartFalling(y);
-        
     }
 
     public void PerformUnionFind()
@@ -325,16 +322,16 @@ public class TileManager : Singleton<TileManager>
                 for (int x = 0; x < _level._columnCount; x++)
                 {
                     int index = to_index(x, y);
-                    if(_flattenedGrid[index] == null || _flattenedGrid[index] == TileType.box || _tileControllers[x][y] == null || _tileControllers[x][y].IsFalling() || _tileControllers[x][y]._newlyCreated)
+
+                    if(_flattenedGrid[index] == null || _tileControllers[x][y] == null)
                         continue;
+                    if(_flattenedGrid[index] == TileType.box || _tileControllers[x][y].IsFalling() || _tileControllers[x][y]._newlyCreated)
+                        continue;
+
                     if (x > 0 && _tileControllers[x-1][y] != null && !_tileControllers[x-1][y].IsFalling() && !_tileControllers[x-1][y]._newlyCreated && _flattenedGrid[index] == _flattenedGrid[to_index(x - 1, y)])
-                    {
                         _unionFind.Union(index, to_index(x - 1, y));
-                    }
                     if (y > 0 && _tileControllers[x][y-1] != null && !_tileControllers[x][y-1].IsFalling() && !_tileControllers[x][y-1]._newlyCreated && _flattenedGrid[index] == _flattenedGrid[to_index(x, y - 1)])
-                    {
                         _unionFind.Union(index, to_index(x, y - 1));
-                    }
                 }
             }
 
@@ -347,7 +344,25 @@ public class TileManager : Singleton<TileManager>
                     this._tileControllers[x][y].SetSprite(this._unionFind.GetSize(to_index(x,y)));
                 }
             }
+
+            bool _isDeadlock = true;
+            for(int index = 0; index < _totalTiles; index++)
+            {
+                if(_unionFind.GetSize(index) != 1)
+                {
+                    _isDeadlock = false;
+                }
+            }
+                
+            
+            if(_isDeadlock)
+                ResolveDeadlock();
         }
+    }
+
+    private void ResolveDeadlock()
+    {
+        Debug.Log("Deadlock Detected");
     }
 
     private int to_index(int x, int y)

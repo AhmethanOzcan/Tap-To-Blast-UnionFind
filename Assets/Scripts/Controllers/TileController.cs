@@ -7,7 +7,7 @@ public class TileController : MonoBehaviour
     [SerializeField] private float _fallSpeed = 0.2f;
     public Tile _tile;
     public bool _extraLife;
-    private SpriteRenderer _spriteRenderer;
+    public SpriteRenderer _spriteRenderer;
     private bool _falling;
     private Vector3 _targetPosition;
     private Sprite _cachedSprite;
@@ -53,6 +53,11 @@ public class TileController : MonoBehaviour
     public bool IsFalling()
     {
         return this._falling;
+    }
+
+    public void QuitFalling()
+    {
+        this._falling = false;
     }
 
     public void SetSprite(int count)
