@@ -10,8 +10,8 @@ public class TileController : MonoBehaviour
     public SpriteRenderer _spriteRenderer;
     private bool _falling;
     private Vector3 _targetPosition;
-    private Sprite _cachedSprite;
     private bool _fallAllowed;
+    private int _spriteType;
 
     private void Awake() {
         this._spriteRenderer = GetComponent<SpriteRenderer>();
@@ -19,6 +19,7 @@ public class TileController : MonoBehaviour
 
     public void Initialize(Tile _tile)
     {
+        this._spriteType            = -1;
         this._fallAllowed           = false;
         this._tile                  = _tile;
         this._falling               = false;
@@ -77,10 +78,9 @@ public class TileController : MonoBehaviour
 
         Sprite newSprite = GetSprite(count);
 
-        if (_cachedSprite == null || _cachedSprite != newSprite)
+        if (newSprite != null)
         {
             this._spriteRenderer.sprite = newSprite;
-            _cachedSprite = newSprite;
         }
         
     }
@@ -89,21 +89,53 @@ public class TileController : MonoBehaviour
     {
         int number = (int)_tile._tileType;
         if(number == 0)
-            return this._extraLife ? TileManager.Instance._tileSprites[number] : TileManager.Instance._tileSprites[number + 7];
+        {
+            if(_spriteType != 0 && this._extraLife)
+            {
+                _spriteType = 0;
+                return TileManager.Instance._tileSprites[number];
+            }
+            else if(_spriteType != 1 && !this._extraLife)
+            {
+                _spriteType = 1;
+                return TileManager.Instance._tileSprites[number + 7];
+            }
+            else
+            {
+                return null;
+            }
+        }
         else
         {
             int _condA = TileManager.Instance._level._firstCondition;
             int _condB = TileManager.Instance._level._secondCondition;
             int _condC = TileManager.Instance._level._thirdCondition;
 
-            if(count > _condA && count <= _condB)
-                return TileManager.Instance._tileSprites[number + 7];
-            else if(count > _condB && count <= _condC)
-                return TileManager.Instance._tileSprites[number + 14];
-            else if(count > _condC)
-                return TileManager.Instance._tileSprites[number + 21];
-            else
+
+            if(_spriteType != 0 && count <= _condA)
+            {
+                _spriteType = 0;
                 return TileManager.Instance._tileSprites[number];
+            }
+            if(_spriteType != 1 && count > _condA && count <= _condB)
+            {
+                _spriteType = 1;
+                return TileManager.Instance._tileSprites[number + 7];
+            }
+            else if(_spriteType != 2 && count > _condB && count <= _condC)
+            {
+                _spriteType = 2;
+                return TileManager.Instance._tileSprites[number + 14];
+            }
+            else if(_spriteType != 3 && count > _condC)
+            {
+                _spriteType = 3;
+                return TileManager.Instance._tileSprites[number + 21];
+            }
+            else
+            {
+                return null;
+            }   
         }
     }
 }

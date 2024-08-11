@@ -23,6 +23,7 @@ public class TileManager : Singleton<TileManager>
     private Queue<Tuple<TileController, int>> _creationQueue;
     private int _totalBlast;
     private float _timeSinceLastCreation;
+    private int _unionFindQueue;
 
     protected override void Awake() {
         base.Awake();
@@ -118,7 +119,9 @@ public class TileManager : Singleton<TileManager>
             {
                 TileController boxController = _tileControllers[boxPos.x][boxPos.y];
                 if(boxController._extraLife)
+                {
                     boxController._extraLife = false;
+                }
                 else
                 {
                     GameObject boxGameObject = boxController.gameObject;
@@ -218,6 +221,7 @@ public class TileManager : Singleton<TileManager>
     public void StartNewLevel(Vector3 gridPos)
     {
         DisableEveryTile();
+        this._unionFindQueue    = 0;
         this._clicked           = true;
         this._fallLock          = new object();
         this._unionInProgress   = new object();
@@ -327,8 +331,12 @@ public class TileManager : Singleton<TileManager>
 
     public void PerformUnionFind()
     {
+        _unionFindQueue++;
         lock (_unionInProgress)
         {
+            _unionFindQueue--;
+            if(_unionFindQueue != 0)
+                return;
             _unionFind.Start();
             for (int y = 0; y < _level._rowCount; y++)
             {
