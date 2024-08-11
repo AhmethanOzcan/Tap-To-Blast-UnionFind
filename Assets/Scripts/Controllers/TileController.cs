@@ -11,7 +11,7 @@ public class TileController : MonoBehaviour
     private bool _falling;
     private Vector3 _targetPosition;
     private Sprite _cachedSprite;
-    public bool _newlyCreated;
+    private bool _fallAllowed;
 
     private void Awake() {
         this._spriteRenderer = GetComponent<SpriteRenderer>();
@@ -19,14 +19,14 @@ public class TileController : MonoBehaviour
 
     public void Initialize(Tile _tile)
     {
+        this._fallAllowed           = false;
         this._tile                  = _tile;
+        this._falling               = false;
         this._extraLife             = _tile._tileType == TileType.box;
-        this._newlyCreated          = true;
     }
 
     public void StartFalling(int targetHeight)
     {
-        this._newlyCreated                  = false;
         this._tile._coordinates.y           = targetHeight;
         this._targetPosition                = TileManager.Instance._gridPositions[this._tile._coordinates.x][targetHeight];
         this._spriteRenderer.sortingOrder   = targetHeight+1;
@@ -36,18 +36,28 @@ public class TileController : MonoBehaviour
 
     void Update()
     {
-        if(this._falling)
+        if(this._falling && this._fallAllowed)
         {
             float step = _fallSpeed * Time.deltaTime;
             transform.position -= transform.up * step;
         
-            if (Mathf.Abs(transform.position.y - _targetPosition.y) < 0.25f || transform.position.y - _targetPosition.y < 0)
+            if (transform.position.y - _targetPosition.y < 0.25f )
             {
                 transform.position = _targetPosition;
                 _falling = false;
                 TileManager.Instance.PerformUnionFind();
             }
         }
+    }
+
+    public bool FallInitiated()
+    {
+        return this._fallAllowed;
+    }
+
+    public void InitiateFall()
+    {
+        this._fallAllowed = true;
     }
 
     public bool IsFalling()

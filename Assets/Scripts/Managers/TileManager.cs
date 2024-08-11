@@ -1,7 +1,10 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
+using Random = UnityEngine.Random;
+
 public class TileManager : Singleton<TileManager>
 {
     [HideInInspector] public List<Transform> _activeSpawns = new List<Transform>();
@@ -16,9 +19,10 @@ public class TileManager : Singleton<TileManager>
     public Level _level;
     private object _unionInProgress;
     private object _fallLock;
-    private object _creationLock;
-    private Queue<int[]> _creationQueue;
+    private bool _creationLock;
+    private Queue<Tuple<TileController, int>> _creationQueue;
     private int _totalBlast;
+    private float _timeSinceLastCreation;
 
     protected override void Awake() {
         base.Awake();
@@ -26,6 +30,7 @@ public class TileManager : Singleton<TileManager>
 
     private void Update()
     {
+        this._timeSinceLastCreation += Time.deltaTime;
         ClickDetection();
     }
 
@@ -45,7 +50,11 @@ public class TileManager : Singleton<TileManager>
                 if (x < 0 || y < 0 || x >= _level._columnCount || y >= _level._rowCount)
                     return;
                 else
+                {
+                    
                     TileBurst(x, y);
+                }
+                    
             }
             finally
             {
@@ -62,7 +71,7 @@ public class TileManager : Singleton<TileManager>
     {
         TileController clickedTile = _tileControllers[x][y];
         int flatIndex = to_index(x, y);
-        if (clickedTile == null || clickedTile.IsFalling() || _unionFind.GetSize(flatIndex) == 1 || _flattenedGrid[flatIndex] == TileType.box)
+        if (clickedTile == null || clickedTile.IsFalling() || !clickedTile.FallInitiated() || _unionFind.GetSize(flatIndex) == 1 || _flattenedGrid[flatIndex] == TileType.box)
             return;
 
         PopRoutine(x, y);
@@ -72,7 +81,7 @@ public class TileManager : Singleton<TileManager>
     {
         lock(_fallLock)
         {
-
+            _totalBlast++;
             // Pop the tiles
             int flatIndex = to_index(corX, corY);
             int leaderIndex = _unionFind.Find(flatIndex);
@@ -149,7 +158,6 @@ public class TileManager : Singleton<TileManager>
                     }
                 }
             }
-            _totalBlast++;
             // Let New Tiles Come
             for (int amount = _level._rowCount; amount > 0; amount--)
             {
@@ -163,8 +171,9 @@ public class TileManager : Singleton<TileManager>
                         _tileControllers[x][y] = tile.GetComponent<TileController>();
                         _flattenedGrid[to_index(x, y)] = tileInfo._tileType;
                         _tileControllers[x][y].Initialize(tileInfo);
+                        _tileControllers[x][y].StartFalling(y);
                         newTileAmounts[x]--;
-                        _creationQueue.Enqueue(new int[] {x, y, _totalBlast});
+                        _creationQueue.Enqueue(Tuple.Create(_tileControllers[x][y], _totalBlast));
                     }
                 }
             }
@@ -175,35 +184,35 @@ public class TileManager : Singleton<TileManager>
 
     private IEnumerator ProcessCreationQueue()
     {
-        if(!Monitor.TryEnter(_creationLock))
+        if(_creationLock)
+            yield break;
+
+        _creationLock = true;
+
+        while(_timeSinceLastCreation < 0.16f)
             yield return null;
 
-        try
+        int _lastY = 15;
+        int _lastOrder = 0;
+        while (_creationQueue.Count > 0)
         {
-            int _lastY = 15;
-            int _lastOrder = 0;
-            while (_creationQueue.Count > 0)
+
+            Tuple<TileController, int> pair = _creationQueue.Dequeue();
+            TileController controller = pair.Item1;
+            int y = controller._tile._coordinates.y;
+            int order = pair.Item2;
+
+            if(y != _lastY || order != _lastOrder)
             {
-
-                int[] coordinates = _creationQueue.Dequeue();
-                int x       = coordinates[0];
-                int y       = coordinates[1];
-                int order   = coordinates[2];
-
-                if(y != _lastY || order != _lastOrder)
-                {
-                    yield return new WaitForSeconds(0.1f);
-                    _lastY = y;
-                }
-                
-                _tileControllers[x][y].StartFalling(y);
+                yield return new WaitForSeconds(0.12f);
+                _lastY = y;
+                _lastOrder = order;
             }
+                
+            controller.InitiateFall();
         }
-        finally
-        {
-            Monitor.Exit(_creationLock);
-        }
-        
+        _timeSinceLastCreation = 0;
+        _creationLock = false;
     }
 
     public void StartNewLevel(Vector3 gridPos)
@@ -212,14 +221,15 @@ public class TileManager : Singleton<TileManager>
         this._clicked           = true;
         this._fallLock          = new object();
         this._unionInProgress   = new object();
-        this._creationLock      = new object();
+        this._creationLock      = false;
         this._tileSize          = _activeSpawns[1].position.x - _activeSpawns[0].position.x;
         this._level             = LevelManager.Instance.GetLevel();
         _totalTiles             = this._level._rowCount * this._level._columnCount;
         this._flattenedGrid     = new TileType?[_totalTiles];
         this._unionFind         = new UnionFind(_totalTiles);
-        this._creationQueue     = new Queue<int[]>();
+        this._creationQueue     = new Queue<Tuple<TileController, int>>();
         this._totalBlast        = 0;
+        this._timeSinceLastCreation = 0;
         FillGridTransforms(gridPos);
         CreateTileMatrices();
         StartCoroutine(FillTiles());
@@ -306,8 +316,7 @@ public class TileManager : Singleton<TileManager>
                 int flatIndex                                       = to_index(x,y);
                 _flattenedGrid[flatIndex]                           = tileInfo._tileType;
                 _tileControllers[x][y].Initialize(tileInfo);
-                _tileControllers[x][y]._newlyCreated                = false;
-                _tileControllers[x][y].QuitFalling();
+                _tileControllers[x][y].InitiateFall();
                 _tileControllers[x][y]._spriteRenderer.sortingOrder = y + 1;
                 _tileControllers[x][y].transform.position           = _gridPositions[x][y];
             }
@@ -329,12 +338,12 @@ public class TileManager : Singleton<TileManager>
 
                     if(_flattenedGrid[index] == null || _tileControllers[x][y] == null)
                         continue;
-                    if(_flattenedGrid[index] == TileType.box || _tileControllers[x][y].IsFalling() || _tileControllers[x][y]._newlyCreated)
+                    if(_flattenedGrid[index] == TileType.box || _tileControllers[x][y].IsFalling() || !_tileControllers[x][y].FallInitiated())
                         continue;
 
-                    if (x > 0 && _tileControllers[x-1][y] != null && !_tileControllers[x-1][y].IsFalling() && !_tileControllers[x-1][y]._newlyCreated && _flattenedGrid[index] == _flattenedGrid[to_index(x - 1, y)])
+                    if (x > 0 && _tileControllers[x-1][y] != null && !_tileControllers[x-1][y].IsFalling() && _tileControllers[x-1][y].FallInitiated() && _flattenedGrid[index] == _flattenedGrid[to_index(x - 1, y)])
                         _unionFind.Union(index, to_index(x - 1, y));
-                    if (y > 0 && _tileControllers[x][y-1] != null && !_tileControllers[x][y-1].IsFalling() && !_tileControllers[x][y-1]._newlyCreated && _flattenedGrid[index] == _flattenedGrid[to_index(x, y - 1)])
+                    if (y > 0 && _tileControllers[x][y-1] != null && !_tileControllers[x][y-1].IsFalling() && _tileControllers[x][y-1].FallInitiated() && _flattenedGrid[index] == _flattenedGrid[to_index(x, y - 1)])
                         _unionFind.Union(index, to_index(x, y - 1));
                 }
             }
@@ -362,9 +371,19 @@ public class TileManager : Singleton<TileManager>
             
             if(_isDeadlock)
             {
-                ResolveDeadlock();
+                if(!CheckAnythingFalling())
+                    ResolveDeadlock();
             } 
         }
+    }
+
+    private bool CheckAnythingFalling()
+    {
+        for(int y = _level._rowCount - 1; y >= 0; y--)
+            for(int x = 0; x < _level._columnCount; x++)
+                if(this._tileControllers[x][y].IsFalling())
+                    return true;
+        return false;
     }
 
     private void ResolveDeadlock()
