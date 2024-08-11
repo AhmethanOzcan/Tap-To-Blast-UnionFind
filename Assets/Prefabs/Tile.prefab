@@ -98,3 +98,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _fallSpeed: 6
+  _extraLife: 0
+  _spriteRenderer: {fileID: 0}
+  _newlyCreated: 0

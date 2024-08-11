@@ -18,6 +18,7 @@ public class TileManager : Singleton<TileManager>
     private object _fallLock;
     private object _creationLock;
     private Queue<int[]> _creationQueue;
+    private int _totalBlast;
 
     protected override void Awake() {
         base.Awake();
@@ -148,7 +149,7 @@ public class TileManager : Singleton<TileManager>
                     }
                 }
             }
-
+            _totalBlast++;
             // Let New Tiles Come
             for (int amount = _level._rowCount; amount > 0; amount--)
             {
@@ -163,7 +164,7 @@ public class TileManager : Singleton<TileManager>
                         _flattenedGrid[to_index(x, y)] = tileInfo._tileType;
                         _tileControllers[x][y].Initialize(tileInfo);
                         newTileAmounts[x]--;
-                        _creationQueue.Enqueue(new int[] {x, y});
+                        _creationQueue.Enqueue(new int[] {x, y, _totalBlast});
                     }
                 }
             }
@@ -180,14 +181,16 @@ public class TileManager : Singleton<TileManager>
         try
         {
             int _lastY = 15;
+            int _lastOrder = 0;
             while (_creationQueue.Count > 0)
             {
 
                 int[] coordinates = _creationQueue.Dequeue();
-                int x = coordinates[0];
-                int y = coordinates[1];
+                int x       = coordinates[0];
+                int y       = coordinates[1];
+                int order   = coordinates[2];
 
-                if(y != _lastY)
+                if(y != _lastY || order != _lastOrder)
                 {
                     yield return new WaitForSeconds(0.1f);
                     _lastY = y;
@@ -216,6 +219,7 @@ public class TileManager : Singleton<TileManager>
         this._flattenedGrid     = new TileType?[_totalTiles];
         this._unionFind         = new UnionFind(_totalTiles);
         this._creationQueue     = new Queue<int[]>();
+        this._totalBlast        = 0;
         FillGridTransforms(gridPos);
         CreateTileMatrices();
         StartCoroutine(FillTiles());

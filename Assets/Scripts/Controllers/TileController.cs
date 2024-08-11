@@ -41,7 +41,7 @@ public class TileController : MonoBehaviour
             float step = _fallSpeed * Time.deltaTime;
             transform.position -= transform.up * step;
         
-            if (Mathf.Abs(transform.position.y - _targetPosition.y) < step)
+            if (Mathf.Abs(transform.position.y - _targetPosition.y) < 0.25f || transform.position.y - _targetPosition.y < 0)
             {
                 transform.position = _targetPosition;
                 _falling = false;
