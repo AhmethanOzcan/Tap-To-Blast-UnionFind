@@ -351,18 +351,134 @@ public class TileManager : Singleton<TileManager>
                 if(_unionFind.GetSize(index) != 1)
                 {
                     _isDeadlock = false;
+                    break;
                 }
             }
                 
             
             if(_isDeadlock)
+            {
                 ResolveDeadlock();
+            } 
         }
     }
 
     private void ResolveDeadlock()
     {
-        Debug.Log("Deadlock Detected");
+        List<PotentialMove> potentialMoves = new List<PotentialMove>();
+        int halfPoint = _totalTiles / 2;
+        for(int from = 0; from < _totalTiles; from++)
+        {
+            for(int to = from < halfPoint? 0 : halfPoint - 1; to < _totalTiles; to++)
+            {
+                if(from == to || _flattenedGrid[to] == _flattenedGrid[from])
+                    continue;
+
+                int points = CheckPointsEarned(from, to);
+                if(points > 0)
+                    potentialMoves.Add(new PotentialMove{fromIndex = from, toIndex = to, score = points});
+            }
+        }
+        potentialMoves.Sort((a,b) => b.score.CompareTo(a.score));
+        // 10 comes from each change locking the area of near tiles
+        int maxChange = _totalTiles / 10;
+        bool[] lockCheck = new bool[_totalTiles]; 
+        foreach(PotentialMove move in potentialMoves)
+        {
+            if(lockCheck[move.fromIndex] || lockCheck[move.toIndex])
+                continue;
+            SwapPosition(move.fromIndex, move.toIndex, lockCheck);
+            maxChange--;
+            if(maxChange == 0)
+                break;
+        }
+        
+    }
+
+    private void SwapPosition(int from, int to, bool[] lockCheck)
+    {
+        Vector2Int fromPos = from_index(from);
+        Vector2Int toPos = from_index(to);
+
+        TileController fromTile = _tileControllers[fromPos.x][fromPos.y];
+        TileController toTile = _tileControllers[toPos.x][toPos.y];
+
+        // Swap the positions in the grid
+        _tileControllers[fromPos.x][fromPos.y] = toTile;
+        _tileControllers[toPos.x][toPos.y] = fromTile;
+
+        // Swap their coordinates
+        fromTile._tile._coordinates = toPos;
+        toTile._tile._coordinates = fromPos;
+
+        // Swap the flattened grid
+        TileType? tempType = _flattenedGrid[from];
+        _flattenedGrid[from] = _flattenedGrid[to];
+        _flattenedGrid[to] = tempType;
+
+        // Smoothly swap positions using coroutines
+        StartCoroutine(SmoothSwap(fromTile, fromPos, toPos));
+        StartCoroutine(SmoothSwap(toTile, toPos, fromPos));
+
+        LockRegion(lockCheck, from);
+        LockRegion(lockCheck, to);
+    }
+
+    private IEnumerator SmoothSwap(TileController tile, Vector2Int startPos, Vector2Int endPos, float duration = 0.3f)
+    {
+        tile._spriteRenderer.sortingOrder = 100;
+        Vector3 start = _gridPositions[startPos.x][startPos.y];
+        Vector3 end = _gridPositions[endPos.x][endPos.y];
+        float elapsedTime = 0;
+
+        while (elapsedTime < duration)
+        {
+            tile.transform.position = Vector3.Lerp(start, end, elapsedTime / duration);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        tile._spriteRenderer.sortingOrder = endPos.y + 1;
+        tile.transform.position = end;
+        PerformUnionFind();
+    }
+
+    private void LockRegion(bool[] lockCheck, int index)
+    {
+        lockCheck[index] = true;
+        if (index > 0) lockCheck[index - 1] = true;
+        if (index < _totalTiles - 1) lockCheck[index + 1] = true;
+        if (index >= _level._columnCount) lockCheck[index - _level._columnCount] = true;
+        if (index < _totalTiles - _level._columnCount) lockCheck[index + _level._columnCount] = true;
+    }
+
+    private int CheckPointsEarned(int a, int b)
+    {
+        int points = 0;
+        // Check if around b contains a's type and around a contains b's type
+        points += CalculatePointsAroundTile(a, _flattenedGrid[b]);
+        points += CalculatePointsAroundTile(b, _flattenedGrid[a]);
+
+        return points;
+    }
+
+    private int CalculatePointsAroundTile(int index, TileType? targetType)
+    {
+        int points = 0;
+
+        if (targetType != TileType.box)
+        {
+            if (index > 0 && _flattenedGrid[index - 1] == targetType)
+                points++;
+            if (index < _totalTiles - 1 && _flattenedGrid[index + 1] == targetType)
+                points++;
+            if (index >= _level._columnCount && _flattenedGrid[index - _level._columnCount] == targetType)
+                points++;
+            if (index < _totalTiles - _level._columnCount && _flattenedGrid[index + _level._columnCount] == targetType)
+                points++;
+        }
+
+        return points;
     }
 
     private int to_index(int x, int y)
@@ -376,6 +492,13 @@ public class TileManager : Singleton<TileManager>
         int y = (index-x)/_level._columnCount;
         return new Vector2Int(x, y);
     }
+}
+
+public class PotentialMove
+{
+    public int fromIndex;
+    public int toIndex;
+    public int score;
 }
 
 public class UnionFind
