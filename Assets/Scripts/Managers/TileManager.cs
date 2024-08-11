@@ -381,7 +381,7 @@ public class TileManager : Singleton<TileManager>
     {
         for(int y = _level._rowCount - 1; y >= 0; y--)
             for(int x = 0; x < _level._columnCount; x++)
-                if(this._tileControllers[x][y].IsFalling())
+                if(this._tileControllers[x][y] != null && this._tileControllers[x][y].IsFalling())
                     return true;
         return false;
     }
@@ -394,7 +394,13 @@ public class TileManager : Singleton<TileManager>
         {
             for(int to = from < halfPoint? 0 : halfPoint - 1; to < _totalTiles; to++)
             {
-                if(from == to || _flattenedGrid[to] == _flattenedGrid[from])
+                if(from == to || _flattenedGrid[to] == _flattenedGrid[from] || (_flattenedGrid[to] == TileType.box && _flattenedGrid[from] == null) || (_flattenedGrid[from] == TileType.box && _flattenedGrid[to] == null))
+                    continue;
+
+                if((_flattenedGrid[from] == TileType.box || _flattenedGrid[from] == null) && from >= _level._columnCount && _flattenedGrid[from-_level._columnCount] == null)
+                    continue;
+
+                if((_flattenedGrid[to] == TileType.box || _flattenedGrid[to] == null) && to >= _level._columnCount && _flattenedGrid[to-_level._columnCount] == null)
                     continue;
 
                 int points = CheckPointsEarned(from, to);
@@ -431,8 +437,10 @@ public class TileManager : Singleton<TileManager>
         _tileControllers[toPos.x][toPos.y] = fromTile;
 
         // Swap their coordinates
-        fromTile._tile._coordinates = toPos;
-        toTile._tile._coordinates = fromPos;
+        if(fromTile != null)
+            fromTile._tile._coordinates = toPos;
+        if(toTile != null)    
+            toTile._tile._coordinates = fromPos;
 
         // Swap the flattened grid
         TileType? tempType = _flattenedGrid[from];
@@ -440,8 +448,10 @@ public class TileManager : Singleton<TileManager>
         _flattenedGrid[to] = tempType;
 
         // Smoothly swap positions using coroutines
-        StartCoroutine(SmoothSwap(fromTile, fromPos, toPos));
-        StartCoroutine(SmoothSwap(toTile, toPos, fromPos));
+        if(fromTile != null)
+            StartCoroutine(SmoothSwap(fromTile, fromPos, toPos));
+        if(toTile != null)
+            StartCoroutine(SmoothSwap(toTile, toPos, fromPos));
 
         LockRegion(lockCheck, from);
         LockRegion(lockCheck, to);
@@ -471,33 +481,37 @@ public class TileManager : Singleton<TileManager>
         lockCheck[index] = true;
         if (index > 0) lockCheck[index - 1] = true;
         if (index < _totalTiles - 1) lockCheck[index + 1] = true;
-        if (index >= _level._columnCount) lockCheck[index - _level._columnCount] = true;
         if (index < _totalTiles - _level._columnCount) lockCheck[index + _level._columnCount] = true;
+        while(index >= _level._columnCount)
+        {
+            lockCheck[index - _level._columnCount] = true;
+            index -= _level._columnCount;
+        } 
     }
 
     private int CheckPointsEarned(int a, int b)
     {
         int points = 0;
         // Check if around b contains a's type and around a contains b's type
-        points += CalculatePointsAroundTile(a, _flattenedGrid[b]);
-        points += CalculatePointsAroundTile(b, _flattenedGrid[a]);
+        points += CalculatePointsAroundTile(a, b, _flattenedGrid[b]);
+        points += CalculatePointsAroundTile(b, a, _flattenedGrid[a]);
 
         return points;
     }
 
-    private int CalculatePointsAroundTile(int index, TileType? targetType)
+    private int CalculatePointsAroundTile(int index, int noIndex, TileType? targetType)
     {
         int points = 0;
 
-        if (targetType != TileType.box)
+        if (targetType != TileType.box || targetType != null)
         {
-            if (index > 0 && _flattenedGrid[index - 1] == targetType)
+            if (index > 0 && index - 1 != noIndex && _flattenedGrid[index - 1] == targetType)
                 points++;
-            if (index < _totalTiles - 1 && _flattenedGrid[index + 1] == targetType)
+            if (index < _totalTiles - 1 && index + 1 != noIndex && _flattenedGrid[index + 1] == targetType)
                 points++;
-            if (index >= _level._columnCount && _flattenedGrid[index - _level._columnCount] == targetType)
+            if (index >= _level._columnCount && index - _level._columnCount != noIndex && _flattenedGrid[index - _level._columnCount] == targetType)
                 points++;
-            if (index < _totalTiles - _level._columnCount && _flattenedGrid[index + _level._columnCount] == targetType)
+            if (index < _totalTiles - _level._columnCount && index + _level._columnCount != noIndex && _flattenedGrid[index + _level._columnCount] == targetType)
                 points++;
         }
 
