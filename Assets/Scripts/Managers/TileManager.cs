@@ -274,7 +274,7 @@ public class TileManager : Singleton<TileManager>
 
 
         
-        float _yPoint   = gridPos.y - _tileSize * _level._rowCount/2 + (_level._rowCount%2)*_tileSize/2 + 0.225f;
+        float _yPoint   = gridPos.y - _tileSize * _level._rowCount/2 + 0.225f;
         for (int y = 0; y < _level._rowCount; y++)
         {
            for (int x = 0; x < _level._columnCount; x++)
