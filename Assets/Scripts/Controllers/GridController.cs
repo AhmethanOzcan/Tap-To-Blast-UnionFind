@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -37,6 +36,7 @@ public class GridController : MonoBehaviour
         _worldPosition.x -= (this._width /2) * this._tileSize;
         if(this._width % 2 == 0) 
             _worldPosition.x += this._tileSize/2f;
+            
         TileManager.Instance._activeSpawns.Clear();
         for(int i = 0; i < this._width; i++)
         {

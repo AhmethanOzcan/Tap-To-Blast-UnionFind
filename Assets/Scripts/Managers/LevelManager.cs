@@ -43,7 +43,7 @@ public class LevelManager : Singleton<LevelManager>
             DeleteStartingBoard();
 
         this._startingBoard = new int[N][];
-        for(int i = 0; i < this._startingBoard.Length; i++)
+        for(int i = 0; i < N; i++)
         {
             this._startingBoard[i] = new int[M];
         }
@@ -51,7 +51,7 @@ public class LevelManager : Singleton<LevelManager>
 
     private void DeleteStartingBoard()
     {
-        for(int i = 0; i < this._startingBoard.Length; i++)
+        for(int i = 0; i < N; i++)
         {
             this._startingBoard[i] = null;
         }
@@ -64,22 +64,11 @@ public class LevelManager : Singleton<LevelManager>
         {
             for(int y = 0; y < this._startingBoard[x].Length; y++)
             {
-                if((x+y) % 2 == 1)
-                    this._startingBoard[x][y] = Random.Range(1, K+1);
-                else
-                    this._startingBoard[x][y] = 0;
+                _startingBoard[x][y] = (x + y) % 2 == 1 ? Random.Range(1, K + 1) : 0;
             }
         }
 
-        _currentLevel = new Level(
-            this.M,
-            this.N,
-            this.K,
-            this.A,
-            this.B,
-            this.C,
-            this._startingBoard
-        );
+        _currentLevel = new Level(M, N, K, A, B, C, _startingBoard);
     }
 
     private void FillEmptyBoard()
@@ -92,15 +81,7 @@ public class LevelManager : Singleton<LevelManager>
             }
         }
 
-        _currentLevel = new Level(
-            this.M,
-            this.N,
-            this.K,
-            this.A,
-            this.B,
-            this.C,
-            this._startingBoard
-        );
+        _currentLevel = new Level(M, N, K, A, B, C, _startingBoard);
     }
 
     public Level GetLevel()

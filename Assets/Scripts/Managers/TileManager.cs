@@ -35,6 +35,10 @@ public class TileManager : Singleton<TileManager>
         ClickDetection();
     }
 
+
+    // ------------------------------------------------------------------------------------------------
+    // CLICK AND POP FUNCTIONS
+
     private void ClickDetection()
     {
         if (!_clicked && Input.GetMouseButton(0))
@@ -48,11 +52,8 @@ public class TileManager : Singleton<TileManager>
                 int x = Mathf.FloorToInt((tapPosition.x - _gridPositions[0][0].x + _tileSize / 2) / _tileSize);
                 int y = Mathf.FloorToInt((tapPosition.y - _gridPositions[0][0].y + _tileSize / 2) / _tileSize);
 
-                if (x < 0 || y < 0 || x >= _level._columnCount || y >= _level._rowCount)
-                    return;
-                else
+                if (x >= 0 && y >= 0 && x < _level._columnCount && y < _level._rowCount)
                 {
-                    
                     TileBurst(x, y);
                 }
                     
@@ -83,10 +84,11 @@ public class TileManager : Singleton<TileManager>
         lock(_fallLock)
         {
             _totalBlast++;
-            // Pop the tiles
             int flatIndex = to_index(corX, corY);
             int leaderIndex = _unionFind.Find(flatIndex);
             HashSet<Vector2Int> boxCoordinates = new HashSet<Vector2Int>();
+
+            // Find and Clear tiles
             for (int i = 0; i < _totalTiles; i++)
                 _unionFind.Find(i);
             for (int i = 0; i < _totalTiles; i++)
@@ -101,16 +103,8 @@ public class TileManager : Singleton<TileManager>
                     _tileControllers[coordinates.x][coordinates.y] = null;
                     _flattenedGrid[i] = null;
                     
-                    // Check for boxes
-                    if(coordinates.y > 0 && _flattenedGrid[i - _level._columnCount] != null && _flattenedGrid[i - _level._columnCount] == TileType.box)
-                        boxCoordinates.Add(new Vector2Int(coordinates.x, coordinates.y-1));
-                    if(coordinates.x > 0 && _flattenedGrid[i - 1] != null && _flattenedGrid[i - 1] == TileType.box)
-                        boxCoordinates.Add(new Vector2Int(coordinates.x-1, coordinates.y));
-                    if(coordinates.x < _level._columnCount-1 && _flattenedGrid[i + 1] != null && _flattenedGrid[i + 1] == TileType.box)
-                        boxCoordinates.Add(new Vector2Int(coordinates.x+1, coordinates.y));
-                    if(coordinates.y < _level._rowCount-1 && _flattenedGrid[i + _level._columnCount] != null && _flattenedGrid[i + _level._columnCount] == TileType.box)
-                        boxCoordinates.Add(new Vector2Int(coordinates.x, coordinates.y+1));
-
+                    // Check box neighbors
+                    TrackBoxNeighbors(coordinates, i, boxCoordinates);
                 }
             }
 
@@ -161,6 +155,8 @@ public class TileManager : Singleton<TileManager>
                     }
                 }
             }
+            
+            
             // Let New Tiles Come
             for (int amount = _level._rowCount; amount > 0; amount--)
             {
@@ -180,9 +176,23 @@ public class TileManager : Singleton<TileManager>
                     }
                 }
             }
+
+
             PerformUnionFind();
         }
         StartCoroutine(ProcessCreationQueue());
+    }
+
+    private void TrackBoxNeighbors(Vector2Int coordinates, int i, HashSet<Vector2Int> boxCoordinates)
+    {
+        if (coordinates.y > 0 && _flattenedGrid[i - _level._columnCount] == TileType.box)
+            boxCoordinates.Add(new Vector2Int(coordinates.x, coordinates.y - 1));
+        if (coordinates.x > 0 && _flattenedGrid[i - 1] == TileType.box)
+            boxCoordinates.Add(new Vector2Int(coordinates.x - 1, coordinates.y));
+        if (coordinates.x < _level._columnCount - 1 && _flattenedGrid[i + 1] == TileType.box)
+            boxCoordinates.Add(new Vector2Int(coordinates.x + 1, coordinates.y));
+        if (coordinates.y < _level._rowCount - 1 && _flattenedGrid[i + _level._columnCount] == TileType.box)
+            boxCoordinates.Add(new Vector2Int(coordinates.x, coordinates.y + 1));
     }
 
     private IEnumerator ProcessCreationQueue()
@@ -218,25 +228,32 @@ public class TileManager : Singleton<TileManager>
         _creationLock = false;
     }
 
+    // ------------------------------------------------------------------------------------------------
+    // LEVEL START FUNCTIONS
     public void StartNewLevel(Vector3 gridPos)
     {
         DisableEveryTile();
-        this._unionFindQueue    = 0;
-        this._clicked           = true;
-        this._fallLock          = new object();
-        this._unionInProgress   = new object();
-        this._creationLock      = false;
-        this._tileSize          = _activeSpawns[1].position.x - _activeSpawns[0].position.x;
-        this._level             = LevelManager.Instance.GetLevel();
-        _totalTiles             = this._level._rowCount * this._level._columnCount;
-        this._flattenedGrid     = new TileType?[_totalTiles];
-        this._unionFind         = new UnionFind(_totalTiles);
-        this._creationQueue     = new Queue<Tuple<TileController, int>>();
-        this._totalBlast        = 0;
-        this._timeSinceLastCreation = 0;
+        ResetLevelVariables();
         FillGridTransforms(gridPos);
         CreateTileMatrices();
         StartCoroutine(FillTiles());
+    }
+
+    private void ResetLevelVariables()
+    {
+        _unionFindQueue = 0;
+        _clicked = true;
+        _fallLock = new object();
+        _unionInProgress = new object();
+        _creationLock = false;
+        _tileSize = _activeSpawns[1].position.x - _activeSpawns[0].position.x;
+        _level = LevelManager.Instance.GetLevel();
+        _totalTiles = _level._rowCount * _level._columnCount;
+        _flattenedGrid = new TileType?[_totalTiles];
+        _unionFind = new UnionFind(_totalTiles);
+        _creationQueue = new Queue<Tuple<TileController, int>>();
+        _totalBlast = 0;
+        _timeSinceLastCreation = 0;
     }
 
     private void DisableEveryTile()
@@ -329,6 +346,8 @@ public class TileManager : Singleton<TileManager>
         this._clicked           = false;
     }
 
+    // ------------------------------------------------------------------------------------------------
+    // DEADLOCK AND UNION FIND FUNCTIONS
     public void PerformUnionFind()
     {
         _unionFindQueue++;
@@ -525,6 +544,10 @@ public class TileManager : Singleton<TileManager>
 
         return points;
     }
+
+
+    // ------------------------------------------------------------------------------------------------
+    // HELPER FUNCTIONS
 
     private int to_index(int x, int y)
     {
